@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
+import nibabel
 import nilearn
-from nilearn import maskers
+from nilearn import masking, maskers
+import numpy
+import os
 import pandas
 
 parser = argparse.ArgumentParser()
@@ -17,7 +20,13 @@ img = nibabel.load(args.meanfmri_niigz)
 img_mask = nilearn.masking.compute_epi_mask(img)
 nibabel.save(img_mask, os.path.join(args.out_dir, 'mask.nii.gz'))
 
-# ROI image
 roi_info = pandas.read_csv(args.roilabels_csv)
 
-nilearn.maskers.NiftiLabelsMasker(args.roi_niigz, )
+masker = nilearn.maskers.NiftiLabelsMasker(args.roi_niigz)
+
+fracs = masker.fit_transform(img_mask)
+
+roi_info['PctCoverage'] = [100*x[0] for x in numpy.transpose(fracs).tolist()]
+
+roi_info.to_csv(os.path.join(args.out_dir, 'coverage.csv'), index=False)
+
